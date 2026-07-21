@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!user.value)
   const isAdmin = computed(() => profile.value?.role === 'admin' || profile.value?.is_admin === true)
+  const isActive = computed(() => profile.value?.is_active !== false)
 
   async function fetchProfile(userId) {
     if (!userId) { profile.value = null; return }
@@ -35,6 +36,13 @@ export const useAuthStore = defineStore('auth', () => {
       const { data, error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) throw err
       user.value = data.user
+      await fetchProfile(data.user?.id)
+      if (profile.value?.is_active === false) {
+        await signOut()
+        const message = 'Tu cuenta ha sido desactivada. Contacta al administrador.'
+        error.value = message
+        return { success: false, message }
+      }
       return { success: true }
     } catch (err) {
       error.value = err.message
@@ -73,5 +81,5 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
-  return { user, profile, loading, error, isLoggedIn, isAdmin, init, signIn, signUp, signOut }
+  return { user, profile, loading, error, isLoggedIn, isAdmin, isActive, init, signIn, signUp, signOut }
 })

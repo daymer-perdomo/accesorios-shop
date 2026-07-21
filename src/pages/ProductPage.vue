@@ -54,8 +54,8 @@
             </button>
           </div>
 
-          <!-- Comprar ahora (pasarela de pago) -->
-          <button class="btn-outline w-full mb-3" :disabled="product.stock === 0">
+          <!-- Comprar ahora: agrega solo este producto y va directo al checkout -->
+          <button class="btn-outline w-full mb-3" :disabled="product.stock === 0" @click="buyNow">
             Comprar ahora
           </button>
 
@@ -100,7 +100,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { ArrowLeftIcon, MinusIcon, PlusIcon, TruckIcon, RotateCcwIcon, ShieldCheckIcon } from '@lucide/vue'
 import { useProductsStore, CATEGORIES } from '../stores/products'
 import { useCartStore } from '../stores/cart'
@@ -108,6 +108,7 @@ import { supabase } from '../lib/supabase'
 import { useSettings } from '../composables/useSettings'
 
 const route = useRoute()
+const router = useRouter()
 const productsStore = useProductsStore()
 const cartStore = useCartStore()
 const { fetchSettings, get } = useSettings()
@@ -131,6 +132,12 @@ function addToCart() {
   }
 }
 
+function buyNow() {
+  if (!product.value) return
+  cartStore.add(product.value, qty.value)
+  router.push('/checkout')
+}
+
 async function buyWhatsApp() {
   const p = product.value
   if (!p) return
@@ -149,12 +156,18 @@ async function buyWhatsApp() {
     '¿Me pueden ayudar con el proceso de compra?',
   ].join('\n')
 
-  await supabase.from('orders').insert({
+  const { error } = await supabase.from('orders').insert({
     channel: 'whatsapp',
     status: 'pending',
     total: p.price * qty.value,
+    first_name: '',
+    last_name: '',
+    email: '',
+    address: '',
+    city: '',
     notes: `Consulta WhatsApp — Producto: ${p.name} | Cantidad: ${qty.value}`,
   })
+  if (error) console.error(error)
 
   await fetchSettings()
   const wa = get('whatsapp_number', import.meta.env.VITE_WHATSAPP_NUMBER)

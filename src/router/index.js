@@ -59,8 +59,12 @@ const router = createRouter({
   scrollBehavior() { return { top: 0 } },
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
+  if ((to.meta.requiresAuth || to.meta.requiresAdmin) && auth.isLoggedIn && !auth.isActive) {
+    await auth.signOut()
+    return { name: 'auth' }
+  }
   if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
   if (to.meta.requiresAuth && !auth.isLoggedIn) return { name: 'auth' }
   if (to.meta.guestOnly && auth.isLoggedIn) return { name: 'account' }

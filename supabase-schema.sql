@@ -122,6 +122,49 @@ create policy "Anyone can insert order items"
 -- ============================================================
 -- SEED: 8 productos iniciales
 -- ============================================================
+-- ============================================================
+-- NOTA: `profiles` también tiene columnas `role` (text) e
+-- `is_admin` (boolean) agregadas manualmente en el dashboard,
+-- fuera de este archivo. La función get_all_users() y la policy
+-- is_admin()-based también viven solo en el dashboard.
+-- ============================================================
+
+-- Usuarios: soft-delete / desactivación desde admin/usuarios
+alter table public.profiles add column if not exists is_active boolean not null default true;
+
+drop function if exists public.get_all_users();
+
+create function public.get_all_users()
+returns table(id uuid, email text, full_name text, phone text, role text, is_active boolean, created_at timestamptz)
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+      AND (profiles.role = 'admin' OR profiles.is_admin = true)
+  ) THEN
+    RAISE EXCEPTION 'Access denied: admin role required';
+  END IF;
+
+  RETURN QUERY
+    SELECT
+      au.id,
+      au.email::text,
+      COALESCE(p.full_name, '')::text  AS full_name,
+      COALESCE(p.phone,     '')::text  AS phone,
+      COALESCE(p.role,   'user')::text AS role,
+      COALESCE(p.is_active, true)      AS is_active,
+      au.created_at
+    FROM auth.users au
+    LEFT JOIN public.profiles p ON p.id = au.id
+    ORDER BY au.created_at DESC;
+END;
+$function$;
+
+
 insert into public.products (name, price, category, images, description, stock, featured, is_new) values
   ('Collar Luna Dorada',      185000, 'collares',  array['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&q=80'], 'Collar delicado con dije de luna en baño de oro 18k. Cadena ajustable de 40 a 45 cm.',  8,  true,  true),
   ('Aretes Perla Clásica',    120000, 'aretes',    array['https://images.unsplash.com/photo-1635767798638-3e25273a8236?w=600&q=80'], 'Aretes de perla cultivada con base de plata 925. Cierre de mariposa.',                  15, true,  false),
