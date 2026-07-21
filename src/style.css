@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-white text-chocolate font-sans;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-3 bg-rose text-white text-sm tracking-wider uppercase font-sans font-medium transition-all duration-300 hover:bg-burgundy active:scale-[0.98];
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center px-8 py-3 border border-chocolate text-chocolate text-sm tracking-wider uppercase font-sans font-medium transition-all duration-300 hover:bg-chocolate hover:text-white active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-4 py-2 text-chocolate text-sm tracking-wider uppercase font-sans font-medium transition-all duration-200 hover:text-rose;
+  }
+
+  .section-title {
+    @apply font-serif text-3xl md:text-4xl text-chocolate font-light tracking-wide;
+  }
+
+  .product-card {
+    @apply cursor-pointer;
+  }
+
+  .input-base {
+    @apply w-full border border-peach bg-white px-4 py-3 text-sm text-chocolate placeholder-chocolate/40 focus:outline-none focus:border-rose transition-colors duration-200;
+  }
+
+  .input {
+    @apply border border-peach bg-white px-3 py-2 text-sm text-chocolate placeholder-chocolate/40 focus:outline-none focus:border-rose transition-colors duration-200;
+  }
+
+  .text-2xs {
+    font-size: 0.65rem;
+    line-height: 1rem;
+  }
+}
