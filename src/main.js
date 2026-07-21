@@ -15,6 +15,6 @@ app.use(router)
 const auth = useAuthStore()
 const productsStore = useProductsStore()
 
-Promise.allSettled([auth.init(), productsStore.fetchProducts()]).then(() => {
+Promise.allSettled([auth.init(), productsStore.fetchProducts(), productsStore.fetchCategories()]).then(() => {
   app.mount('#app')
 })

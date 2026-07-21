@@ -102,7 +102,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { ArrowLeftIcon, MinusIcon, PlusIcon, TruckIcon, RotateCcwIcon, ShieldCheckIcon } from '@lucide/vue'
-import { useProductsStore, CATEGORIES } from '../stores/products'
+import { useProductsStore } from '../stores/products'
 import { useCartStore } from '../stores/cart'
 import { supabase } from '../lib/supabase'
 import { useSettings } from '../composables/useSettings'
@@ -117,7 +117,7 @@ const qty = ref(1)
 const product = computed(() => productsStore.getById(route.params.id))
 
 const categoryLabel = computed(() =>
-  CATEGORIES.find(c => c.id === product.value?.category)?.label ?? ''
+  productsStore.CATEGORIES.find(c => c.id === product.value?.category)?.label ?? ''
 )
 
 const formattedPrice = computed(() =>

@@ -39,7 +39,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../../stores/cart'
-import { CATEGORIES } from '../../stores/products'
+import { useProductsStore } from '../../stores/products'
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -47,9 +47,10 @@ const props = defineProps({
 
 const $router = useRouter()
 const cart = useCartStore()
+const productsStore = useProductsStore()
 
 const categoryLabel = computed(() =>
-  CATEGORIES.find(c => c.id === props.product.category)?.label ?? ''
+  productsStore.CATEGORIES.find(c => c.id === props.product.category)?.label ?? ''
 )
 
 const formattedPrice = computed(() =>

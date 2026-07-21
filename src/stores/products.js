@@ -2,19 +2,17 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
 
-export const CATEGORIES = [
-  { id: 'all', label: 'Todo' },
-  { id: 'collares', label: 'Collares' },
-  { id: 'aretes', label: 'Aretes' },
-  { id: 'pulseras', label: 'Pulseras' },
-  { id: 'anillos', label: 'Anillos' },
-]
-
 export const useProductsStore = defineStore('products', () => {
   const products = ref([])
+  const categories = ref([])
   const loading = ref(false)
   const activeCategory = ref('all')
   const searchQuery = ref('')
+
+  const CATEGORIES = computed(() => [
+    { id: 'all', label: 'Todo' },
+    ...categories.value.map(c => ({ id: c.slug, label: c.label })),
+  ])
 
   const filtered = computed(() => {
     let result = products.value
@@ -56,5 +54,17 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
-  return { products, loading, activeCategory, searchQuery, filtered, featured, getById, setCategory, fetchProducts }
+  async function fetchCategories() {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('order_index', { ascending: true })
+
+    if (!error) categories.value = data ?? []
+  }
+
+  return {
+    products, categories, CATEGORIES, loading, activeCategory, searchQuery,
+    filtered, featured, getById, setCategory, fetchProducts, fetchCategories,
+  }
 })

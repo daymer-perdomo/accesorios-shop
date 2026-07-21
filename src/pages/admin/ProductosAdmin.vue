@@ -5,6 +5,30 @@
       <button class="btn-primary text-xs" @click="openCreate">+ Nuevo producto</button>
     </div>
 
+    <!-- Categorías -->
+    <div class="mb-10">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs tracking-widest uppercase text-chocolate/50 font-medium">Categorías</h2>
+        <button class="text-xs text-rose hover:text-burgundy transition-colors" @click="openCreateCategory">+ Categoría</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <div
+          v-for="cat in productsStore.categories"
+          :key="cat.id"
+          class="flex items-center gap-2 px-3 py-1.5 bg-white border border-peach text-xs text-chocolate"
+        >
+          {{ cat.label }}
+          <button class="text-chocolate/40 hover:text-chocolate transition-colors" @click="openEditCategory(cat)">
+            <PencilIcon :size="12" />
+          </button>
+          <button class="text-chocolate/40 hover:text-red-500 transition-colors" @click="confirmDeleteCategory(cat)">
+            <Trash2Icon :size="12" />
+          </button>
+        </div>
+        <p v-if="productsStore.categories.length === 0" class="text-xs text-chocolate/40">Sin categorías</p>
+      </div>
+    </div>
+
     <div v-if="loading" class="text-center py-12 text-chocolate/40">Cargando...</div>
     <div v-else class="bg-white border border-peach overflow-hidden">
       <table class="w-full text-xs">
@@ -79,10 +103,7 @@
             <div>
               <label class="text-2xs tracking-widest uppercase text-chocolate/50 block mb-1">Categoría *</label>
               <select v-model="modal.category" required class="input w-full">
-                <option value="collares">Collares</option>
-                <option value="aretes">Aretes</option>
-                <option value="pulseras">Pulseras</option>
-                <option value="anillos">Anillos</option>
+                <option v-for="cat in productsStore.categories" :key="cat.id" :value="cat.slug">{{ cat.label }}</option>
               </select>
             </div>
             <div>
@@ -128,6 +149,58 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal crear/editar categoría -->
+    <Teleport to="body">
+      <div v-if="categoryModal" class="fixed inset-0 bg-chocolate/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="categoryModal = null">
+        <div class="bg-white w-full max-w-sm border border-peach">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-peach">
+            <h2 class="font-serif text-xl text-chocolate font-light">{{ categoryModal.id ? 'Editar categoría' : 'Nueva categoría' }}</h2>
+            <button class="text-chocolate/40 hover:text-chocolate" @click="categoryModal = null"><XIcon :size="18" /></button>
+          </div>
+          <form class="px-6 py-6 flex flex-col gap-4" @submit.prevent="saveCategory">
+            <div>
+              <label class="text-2xs tracking-widest uppercase text-chocolate/50 block mb-1">Nombre *</label>
+              <input v-model="categoryModal.label" required class="input w-full" @input="syncSlug" />
+            </div>
+            <div>
+              <label class="text-2xs tracking-widest uppercase text-chocolate/50 block mb-1">Slug (interno)</label>
+              <input v-model="categoryModal.slug" required class="input w-full" />
+            </div>
+            <p v-if="categorySaveError" class="text-xs text-red-500">{{ categorySaveError }}</p>
+            <div class="flex gap-3 pt-2">
+              <button type="submit" class="btn-primary text-xs flex-1" :disabled="savingCategory">
+                {{ savingCategory ? 'Guardando...' : 'Guardar' }}
+              </button>
+              <button type="button" class="btn-ghost text-xs" @click="categoryModal = null">Cancelar</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Confirmar / bloquear eliminar categoría -->
+    <Teleport to="body">
+      <div v-if="categoryToDelete" class="fixed inset-0 bg-chocolate/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="categoryToDelete = null">
+        <div class="bg-white border border-peach p-8 max-w-sm w-full text-center">
+          <template v-if="categoryToDelete.productCount > 0">
+            <p class="font-serif text-xl text-chocolate font-light mb-2">No se puede eliminar</p>
+            <p class="text-xs text-chocolate/60 mb-6">
+              "{{ categoryToDelete.label }}" tiene {{ categoryToDelete.productCount }} producto{{ categoryToDelete.productCount === 1 ? '' : 's' }} asignado{{ categoryToDelete.productCount === 1 ? '' : 's' }}. Reasígnalos o elimínalos primero.
+            </p>
+            <button class="btn-ghost text-xs" @click="categoryToDelete = null">Cerrar</button>
+          </template>
+          <template v-else>
+            <p class="font-serif text-xl text-chocolate font-light mb-2">¿Eliminar categoría?</p>
+            <p class="text-xs text-chocolate/60 mb-6">{{ categoryToDelete.label }}</p>
+            <div class="flex gap-3 justify-center">
+              <button class="btn-primary bg-red-500 hover:bg-red-600 text-xs" @click="deleteCategory">Eliminar</button>
+              <button class="btn-ghost text-xs" @click="categoryToDelete = null">Cancelar</button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </main>
 </template>
 
@@ -135,6 +208,9 @@
 import { ref, onMounted } from 'vue'
 import { PencilIcon, Trash2Icon, XIcon } from '@lucide/vue'
 import { supabase } from '../../lib/supabase'
+import { useProductsStore } from '../../stores/products'
+
+const productsStore = useProductsStore()
 
 const products = ref([])
 const loading = ref(true)
@@ -143,7 +219,15 @@ const toDelete = ref(null)
 const saving = ref(false)
 const saveError = ref('')
 
-onMounted(fetchProducts)
+const categoryModal = ref(null)
+const savingCategory = ref(false)
+const categorySaveError = ref('')
+const categoryToDelete = ref(null)
+
+onMounted(() => {
+  fetchProducts()
+  productsStore.fetchCategories()
+})
 
 async function fetchProducts() {
   loading.value = true
@@ -153,7 +237,7 @@ async function fetchProducts() {
 }
 
 function openCreate() {
-  modal.value = { name: '', price: 0, stock: 0, category: 'collares', imageUrl: '', description: '', featured: false, is_new: false }
+  modal.value = { name: '', price: 0, stock: 0, category: productsStore.categories[0]?.slug ?? '', imageUrl: '', description: '', featured: false, is_new: false }
   saveError.value = ''
 }
 
@@ -199,5 +283,60 @@ async function deleteProduct() {
 
 function formatPrice(v) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(v)
+}
+
+function slugify(str) {
+  return str
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+function openCreateCategory() {
+  categoryModal.value = { label: '', slug: '', autoSlug: true }
+  categorySaveError.value = ''
+}
+
+function openEditCategory(cat) {
+  categoryModal.value = { id: cat.id, label: cat.label, slug: cat.slug, autoSlug: false }
+  categorySaveError.value = ''
+}
+
+function syncSlug() {
+  if (categoryModal.value?.autoSlug) {
+    categoryModal.value.slug = slugify(categoryModal.value.label)
+  }
+}
+
+async function saveCategory() {
+  savingCategory.value = true
+  categorySaveError.value = ''
+  const payload = { label: categoryModal.value.label, slug: categoryModal.value.slug }
+  let error
+  if (categoryModal.value.id) {
+    ({ error } = await supabase.from('categories').update(payload).eq('id', categoryModal.value.id))
+  } else {
+    ({ error } = await supabase.from('categories').insert(payload))
+  }
+  savingCategory.value = false
+  if (error) { categorySaveError.value = error.message; return }
+  categoryModal.value = null
+  await productsStore.fetchCategories()
+}
+
+async function confirmDeleteCategory(cat) {
+  const { count } = await supabase
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('category', cat.slug)
+  categoryToDelete.value = { ...cat, productCount: count ?? 0 }
+}
+
+async function deleteCategory() {
+  const cat = categoryToDelete.value
+  categoryToDelete.value = null
+  await supabase.from('categories').delete().eq('id', cat.id)
+  await productsStore.fetchCategories()
 }
 </script>

@@ -12,7 +12,7 @@
       <!-- Filters -->
       <div class="flex flex-wrap items-center gap-3 mb-10">
         <button
-          v-for="cat in CATEGORIES"
+          v-for="cat in store.CATEGORIES"
           :key="cat.id"
           class="text-xs tracking-widest uppercase px-4 py-2 border transition-all duration-200"
           :class="store.activeCategory === cat.id
@@ -46,7 +46,7 @@
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '../components/ui/ProductCard.vue'
-import { useProductsStore, CATEGORIES } from '../stores/products'
+import { useProductsStore } from '../stores/products'
 
 const store = useProductsStore()
 const route = useRoute()
